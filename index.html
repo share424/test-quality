@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Webpack App</title>
+    </head>
+    <body>
+        <div>
+            <label for="">Select file</label>
+            <input type="file" id="file">
+
+            <canvas id="canvas"></canvas>
+        </div>
+        <div id="eru">
+
+        </div>
+        <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+        <script>
+            let el = document.getElementById('eru');
+
+            eruda.init({
+                container: el,
+                tool: ['console', 'elements']
+            });
+        </script>
+        
+        <script src="dist/main.js"></script>
+        <script>
+            const qualityDetector = new Vision.QualityDetector();
+            qualityDetector.init()
+                .then((detector) => {
+                    console.log('quality detector is ready');
+                    init(detector);
+                });
+
+            function init(detector) {
+                const file = document.getElementById('file');
+                var canvas = document.getElementById("canvas");
+                var ctx = canvas.getContext("2d");
+                file.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    // render to canvas
+                    var reader = new FileReader();
+                    reader.onload = function(event) {
+                        var img = new Image();
+                        img.onload = function() {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            ctx.drawImage(img, 0, 0);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            detector.detectFromImageData(imageData)
+                                .then(quality => {
+                                    console.log(quality);
+                                })
+                                .catch(err => {
+                                    console.log('error', err);
+                                });
+                        }
+                        img.src = event.target.result;
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+        </script>
+    </body>
+    
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Webcam Display</title>
+</head>
+<body>
+    <video id="videoElement" width="640" height="480" autoplay></video>
+    <canvas id="canvasElement" width="640" height="480"></canvas>
+    <div>
+        <label for="fps">fps</label>
+        <input type="text" id="fps" value="0">
+    </div>
+    <div>
+        <label for="isBlur">isBlur</label>
+        <input type="text" id="isBlur" value="0">
+    </div>
+    <div>
+        <label for="isTextNotReadable">isTextNotReadable</label>
+        <input type="text" id="isTextNotReadable" value="0">
+    </div>
+    <div id="eru">
+
+    </div>
+    <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        let el = document.getElementById('eru');
+
+        eruda.init({
+            container: el,
+            tool: ['console', 'elements']
+        });
+    </script>
+    <script src="dist/main.js"></script>
+    <script>
+        const qualityDetector = new Vision.QualityDetector({
+            text: {
+                maxCandidates: 100
+            }
+        });
+        const profiler = new Vision.Profiler();
+        qualityDetector.init()
+            .then((detector) => {
+                console.log('quality detector is ready');
+                init()
+            });
+
+        let captureDevice = null;
+
+        // Get the video and canvas elements
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvasElement');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const txtFps = document.getElementById('fps');
+        const txtIsBlur = document.getElementById('isBlur');
+        const txtIsTextNotReadable = document.getElementById('isTextNotReadable');
+
+        function init() {
+            // Request access to the webcam
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then((stream) => {
+                    // Set the video source to the webcam stream
+                    video.srcObject = stream;
+                    
+                    // Start capturing frames
+                    requestAnimationFrame(captureFrame);
+                })
+                .catch((error) => {
+                    console.error('Error accessing webcam:', error);
+                });
+        }
+
+        function captureFrame() {
+            // Draw the current frame from the video onto the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+            profiler.run(() => qualityDetector.detectFromImageData(imageData))
+                    .then(([quality, time]) => {
+                        // convert ms to fps
+                        const fps = 1000 / time;
+                        txtFps.value = fps.toFixed(2);
+                        txtIsBlur.value = quality.isBlur;
+                        txtIsTextNotReadable.value = quality.isTextNotReadable;
+                        requestAnimationFrame(captureFrame);
+                    });
+
+        }
+
+        function processFrame(blob) {
+            const reader = new FileReader();
+            reader.readAsDataURL(blob); 
+            reader.onloadend = function() {
+                const base64 = reader.result;
+                profiler.run(() => qualityDetector.detectFromBase64(base64))
+                    .then(([quality, time]) => {
+                        // convert ms to fps
+                        const fps = 1000 / time;
+                        txtFps.value = fps.toFixed(2);
+                        txtIsBlur.value = quality.isBlur;
+                        txtIsTextNotReadable.value = quality.isTextNotReadable;
+                        requestAnimationFrame(captureFrame);
+                    });
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -135,10 +135,14 @@
                 console.error('Worker error:', e.data.error);
                 sendToWorker(imageData);
             } else if (e.data.event == 'result') {
+                // console.log(e.data.quality)
+                // console.log('blur', e.data.quality.isBlur.duration);
+                // console.log('light', e.data.quality.light.duration);
+                // console.log('text', e.data.quality.isTextNotReadable.duration);
                 const fps = 1000 / e.data.time;
                 txtFps.value = fps.toFixed(2);
                 txtIsBlur.value = e.data.quality.isBlur.value;
-                txtIsTextNotReadable.value = e.data.quality.isTextNotReadable;
+                txtIsTextNotReadable.value = e.data.quality.isTextNotReadable.value;
                 txtBlurScore.value = e.data.quality.isBlur.score;
 
                 txtIsBright.value = e.data.quality.light.isBright;

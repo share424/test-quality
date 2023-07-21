@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Webcam Display</title>
+</head>
+<body>
+    <video id="videoElement" width="640" height="480" muted autoplay playsinline></video>
+    <canvas id="canvasElement" width="640" height="480" style="display: none"></canvas>
+    <div>
+        <label for="fps">fps</label>
+        <input type="text" id="fps" value="0">
+    </div>
+    <div>
+        <label for="isBright">isBright</label>
+        <input type="text" id="isBright" value="0">
+    </div>
+    <div>
+        <label for="isDark">isDark</label>
+        <input type="text" id="isDark" value="0">
+    </div>
+    <div>
+        <label for="isBlur">isBlur</label>
+        <input type="text" id="isBlur" value="0">
+    </div>
+    <div>
+        <label for="isTextNotReadable">isTextNotReadable</label>
+        <input type="text" id="isTextNotReadable" value="0">
+    </div>
+    <hr>
+    <div>
+        <label for="lightScore">lightScore</label>
+        <input type="text" id="lightScore" value="0">
+    </div>
+    <div>
+        <label for="brightThreshold">brightThreshold</label>
+        <input type="text" id="brightThreshold" value="90">
+    </div>
+    <div>
+        <label for="darkThreshold">darkThreshold</label>
+        <input type="text" id="darkThreshold" value="40">
+    </div>
+    <div>
+        <label for="blurScore">blurScore</label>
+        <input type="text" id="blurScore" value="0">
+    </div>
+    <div>
+        <label for="blurTreshold">blurTreshold</label>
+        <input type="text" id="blurTreshold" value="10">
+    </div>
+    <div id="eru">
+
+    </div>
+    <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+        let el = document.getElementById('eru');
+
+        eruda.init({
+            container: el,
+            tool: ['console', 'elements']
+        });
+    </script>
+    <script>
+        const worker = new Worker('worker-webgl.js', { type: 'module' });
+        worker.onmessage = receiveFromWorker;
+
+        // Get the video and canvas elements   dsadas
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvasElement');
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const txtFps = document.getElementById('fps');
+        
+        const txtIsBright = document.getElementById('isBright');
+        const txtIsDark = document.getElementById('isDark');
+        const txtIsBlur = document.getElementById('isBlur');
+        const txtIsTextNotReadable = document.getElementById('isTextNotReadable');
+        const txtBlurScore = document.getElementById('blurScore');
+        const txtBlurTreshold = document.getElementById('blurTreshold');
+        const txtLightScore = document.getElementById('lightScore');
+        const txtBrightThreshold = document.getElementById('brightThreshold');
+        const txtDarkThreshold = document.getElementById('darkThreshold');
+
+        function init() {
+            // Request access to the webcam
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+                .then((stream) => {
+                    // Set the video source to the webcam stream
+                    video.srcObject = stream;
+                    
+                    // Start capturing frames
+                    requestAnimationFrame(captureFrame);
+                })
+                .catch((error) => {
+                    console.error('Error accessing webcam:', error);
+                });
+        }
+
+        let imageData = null;
+        let first = true;
+
+        function captureFrame() {
+            // Draw the current frame from the video onto the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            if (first) {
+                sendToWorker(imageData);
+                first = false;
+            }
+
+            requestAnimationFrame(captureFrame);
+        }
+
+        function sendToWorker(imageData) {
+            if (imageData == null) {
+                console.error('imageData is null');
+                return;
+            }
+            const options = {
+                blur: {
+                    threshold: txtBlurTreshold.value
+                },
+                light: {
+                    brightThreshold: txtBrightThreshold.value,
+                    darkThreshold: txtDarkThreshold.value
+                }
+            }
+            worker.postMessage({ imageData, options });
+        }
+
+        function receiveFromWorker(e) {
+            if (e.data.event == 'ready') {
+                console.log('Worker ready');
+                init();
+            } else if (e.data.event == 'error') {
+                console.error('Worker error:', e.data.error);
+                sendToWorker(imageData);
+            } else if (e.data.event == 'result') {
+                // console.log(e.data.quality)
+                // console.log('blur', e.data.quality.isBlur.duration);
+                // console.log('light', e.data.quality.light.duration);
+                // console.log('text', e.data.quality.isTextNotReadable.duration);
+                const fps = 1000 / e.data.time;
+                txtFps.value = fps.toFixed(2);
+                txtIsBlur.value = e.data.quality.isBlur.value;
+                txtIsTextNotReadable.value = e.data.quality.isTextNotReadable.value;
+                txtBlurScore.value = e.data.quality.isBlur.score;
+
+                txtIsBright.value = e.data.quality.light.isBright;
+                txtIsDark.value = e.data.quality.light.isDark;
+                txtLightScore.value = e.data.quality.light.score;
+                sendToWorker(imageData);
+            }
+        }
+
+    </script>
+</body>
+</html>

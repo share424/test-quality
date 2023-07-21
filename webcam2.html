@@ -18,6 +18,14 @@
         <label for="isTextNotReadable">isTextNotReadable</label>
         <input type="text" id="isTextNotReadable" value="0">
     </div>
+    <div>
+        <label for="blurScore">blurScore</label>
+        <input type="text" id="blurScore" value="0">
+    </div>
+    <div>
+        <label for="blurTreshold">blurTreshold</label>
+        <input type="text" id="blurTreshold" value="10">
+    </div>
     <div id="eru">
 
     </div>
@@ -41,6 +49,8 @@
         const txtFps = document.getElementById('fps');
         const txtIsBlur = document.getElementById('isBlur');
         const txtIsTextNotReadable = document.getElementById('isTextNotReadable');
+        const txtBlurScore = document.getElementById('blurScore');
+        const txtBlurTreshold = document.getElementById('blurTreshold');
 
         function init() {
             // Request access to the webcam
@@ -78,7 +88,12 @@
                 console.error('imageData is null');
                 return;
             }
-            worker.postMessage({ imageData });
+            const options = {
+                blur: {
+                    threshold: txtBlurTreshold.value
+                }
+            }
+            worker.postMessage({ imageData, options });
         }
 
         function receiveFromWorker(e) {
@@ -91,8 +106,9 @@
             } else if (e.data.event == 'result') {
                 const fps = 1000 / e.data.time;
                 txtFps.value = fps.toFixed(2);
-                txtIsBlur.value = e.data.quality.isBlur;
+                txtIsBlur.value = e.data.quality.isBlur.value;
                 txtIsTextNotReadable.value = e.data.quality.isTextNotReadable;
+                txtBlurScore.value = e.data.quality.isBlur.score;
                 sendToWorker(imageData);
             }
         }

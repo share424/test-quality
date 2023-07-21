@@ -35,7 +35,7 @@ self.onmessage = function(e) {
         });
     }
     
-    qualityDetector.detectFromImageData(e.data.imageData)
+    qualityDetector.detectFromImageData(e.data.imageData, e.data.options)
         .then(([quality, time]) => {
             self.postMessage({
                 event: 'result',
